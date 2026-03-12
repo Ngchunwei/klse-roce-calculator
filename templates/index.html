@@ -150,8 +150,13 @@
   .reset-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-family:var(--mono);font-size:10px;color:var(--text-muted);cursor:pointer;transition:all .2s;margin-top:14px;}
   .reset-btn:hover{border-color:var(--accent);color:var(--accent);}
 
-  /* ── Suitability info box ── */
+  /* ── Suitability Notice ── */
   .suit-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:22px;animation:fadeUp .5s .08s ease both;}
+  .suit-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+  .suit-toggle{color:var(--text-muted);transition:transform .3s ease;}
+  .suit-toggle.open{transform:rotate(180deg);}
+  .suit-content{display:none;margin-top:16px;animation:fadeDown .3s ease both;}
+  .suit-content.open{display:block;}
   .suit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
   .suit-col{background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
   .suit-col.good{border-color:rgba(0,232,122,.2);background:rgba(0,232,122,.03);}
@@ -255,53 +260,59 @@
 
   <!-- Suitability Notice -->
   <div class="suit-box" id="suitBox">
-    <div class="guide-title" id="suit-main-title">
-      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span id="txt-suit-title">Kesesuaian ROCE — Baca Sebelum Menggunakan</span>
+    <div class="suit-header" onclick="toggleSuitability()">
+      <div class="guide-title" id="suit-main-title" style="margin-bottom:0;">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="txt-suit-title">Kesesuaian ROCE — Baca Sebelum Menggunakan</span>
+      </div>
+      <svg class="suit-toggle" id="suitToggle" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
-    <div class="suit-grid">
-      <div class="suit-col good">
-        <div class="suit-title good">
-          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-          <span id="txt-suit-good-title">Sesuai Untuk</span>
+    
+    <div class="suit-content" id="suitContent">
+      <div class="suit-grid">
+        <div class="suit-col good">
+          <div class="suit-title good">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            <span id="txt-suit-good-title">Sesuai Untuk</span>
+          </div>
+          <div class="suit-items" id="suit-good-items">
+            <div class="suit-item" id="sg1">Syarikat pengguna (consumer goods) — NESTLE, DLADY</div>
+            <div class="suit-item" id="sg2">Syarikat runcit (retail) — MRDIY, PADINI, AEON</div>
+            <div class="suit-item" id="sg3">Syarikat makanan & minuman — QLG, PWROOT, F&N</div>
+            <div class="suit-item" id="sg4">Syarikat perkilangan & perindustrian</div>
+            <div class="suit-item" id="sg5">Syarikat teknologi dengan aset tetap</div>
+          </div>
         </div>
-        <div class="suit-items" id="suit-good-items">
-          <div class="suit-item" id="sg1">Syarikat pengguna (consumer goods) — NESTLE, DLADY</div>
-          <div class="suit-item" id="sg2">Syarikat runcit (retail) — MRDIY, PADINI, AEON</div>
-          <div class="suit-item" id="sg3">Syarikat makanan & minuman — QLG, PWROOT, F&N</div>
-          <div class="suit-item" id="sg4">Syarikat perkilangan & perindustrian</div>
-          <div class="suit-item" id="sg5">Syarikat teknologi dengan aset tetap</div>
+        <div class="suit-col bad">
+          <div class="suit-title bad">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span id="txt-suit-bad-title">Tidak Sesuai Untuk</span>
+          </div>
+          <div class="suit-items" id="suit-bad-items">
+            <div class="suit-item" id="sb1"><strong style="color:var(--text)">REITs</strong> — modal sangat tinggi, ROCE akan sentiasa rendah & mengelirukan</div>
+            <div class="suit-item" id="sb2"><strong style="color:var(--text)">Bank & kewangan</strong> — MAYBANK, PBBANK, RHB — guna ROE bukan ROCE</div>
+            <div class="suit-item" id="sb3"><strong style="color:var(--text)">Syarikat insurans</strong> — struktur modal berbeza sepenuhnya</div>
+            <div class="suit-item" id="sb4"><strong style="color:var(--text)">Syarikat baru / startup</strong> — EBIT negatif, ROCE tidak bermakna</div>
+            <div class="suit-item" id="sb5"><strong style="color:var(--text)">Syarikat perlombongan/O&G</strong> — modal sangat berat, ROCE semula jadi rendah</div>
+          </div>
         </div>
       </div>
-      <div class="suit-col bad">
-        <div class="suit-title bad">
-          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          <span id="txt-suit-bad-title">Tidak Sesuai Untuk</span>
+      <div class="suit-col warn" style="margin-top:10px;">
+        <div class="suit-title warn">
+          <svg width="10" height="10" fill="none" stroke="#ffb84d" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="txt-suit-warn-title">Perlu Diperhatikan</span>
         </div>
-        <div class="suit-items" id="suit-bad-items">
-          <div class="suit-item" id="sb1"><strong style="color:var(--text)">REITs</strong> — modal sangat tinggi, ROCE akan sentiasa rendah & mengelirukan</div>
-          <div class="suit-item" id="sb2"><strong style="color:var(--text)">Bank & kewangan</strong> — MAYBANK, PBBANK, RHB — guna ROE bukan ROCE</div>
-          <div class="suit-item" id="sb3"><strong style="color:var(--text)">Syarikat insurans</strong> — struktur modal berbeza sepenuhnya</div>
-          <div class="suit-item" id="sb4"><strong style="color:var(--text)">Syarikat baru / startup</strong> — EBIT negatif, ROCE tidak bermakna</div>
-          <div class="suit-item" id="sb5"><strong style="color:var(--text)">Syarikat perlombongan/O&G</strong> — modal sangat berat, ROCE semula jadi rendah</div>
+        <div class="suit-items" id="suit-warn-items">
+          <div class="suit-item" id="sw1">ROCE adalah data <strong style="color:var(--text)">sejarah</strong> — tidak mencerminkan prestasi masa depan</div>
+          <div class="suit-item" id="sw2">Bandingkan hanya syarikat dalam <strong style="color:var(--text)">industri yang sama</strong> — benchmark berbeza mengikut sektor</div>
+          <div class="suit-item" id="sw3">Syarikat dengan <strong style="color:var(--text)">simpanan tunai besar</strong> mungkin tunjuk ROCE rendah walaupun operasi cekap</div>
+          <div class="suit-item" id="sw4">Aset lama (sudah susut nilai penuh) boleh <strong style="color:var(--text)">mengelembungkan ROCE</strong> secara artifisial</div>
+          <div class="suit-item" id="sw5">Guna ROCE <strong style="color:var(--text)">bersama</strong> ROE, ROA, P/E — jangan bergantung pada satu metrik sahaja</div>
         </div>
       </div>
-    </div>
-    <div class="suit-col warn" style="margin-top:10px;">
-      <div class="suit-title warn">
-        <svg width="10" height="10" fill="none" stroke="#ffb84d" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span id="txt-suit-warn-title">Perlu Diperhatikan</span>
+      <div class="suit-note" id="txt-suit-note">
+        💡 <strong>Ringkasan:</strong> ROCE paling berguna untuk syarikat operasi biasa (bukan kewangan, bukan hartanah) yang boleh dibandingkan dalam industri yang sama. REITs dan bank perlukan metrik khas yang berbeza.
       </div>
-      <div class="suit-items" id="suit-warn-items">
-        <div class="suit-item" id="sw1">ROCE adalah data <strong style="color:var(--text)">sejarah</strong> — tidak mencerminkan prestasi masa depan</div>
-        <div class="suit-item" id="sw2">Bandingkan hanya syarikat dalam <strong style="color:var(--text)">industri yang sama</strong> — benchmark berbeza mengikut sektor</div>
-        <div class="suit-item" id="sw3">Syarikat dengan <strong style="color:var(--text)">simpanan tunai besar</strong> mungkin tunjuk ROCE rendah walaupun operasi cekap</div>
-        <div class="suit-item" id="sw4">Aset lama (sudah susut nilai penuh) boleh <strong style="color:var(--text)">mengelembungkan ROCE</strong> secara artifisial</div>
-        <div class="suit-item" id="sw5">Guna ROCE <strong style="color:var(--text)">bersama</strong> ROE, ROA, P/E — jangan bergantung pada satu metrik sahaja</div>
-      </div>
-    </div>
-    <div class="suit-note" id="txt-suit-note">
-      💡 <strong>Ringkasan:</strong> ROCE paling berguna untuk syarikat operasi biasa (bukan kewangan, bukan hartanah) yang boleh dibandingkan dalam industri yang sama. REITs dan bank perlukan metrik khas yang berbeza.
     </div>
   </div>
 
@@ -314,7 +325,6 @@
           <span style="color:var(--text-muted); font-size:0.9em;">Data Source:</span>
           <select id="dataSource" onchange="updatePlaceholder()" style="padding:5px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:4px;">
             <option value="yahoo">Yahoo Finance (Auto)</option>
-            <option value="stockanalysis">StockAnalysis.com (Beta)</option>
           </select>
         </div>
 
@@ -352,15 +362,6 @@
           <span id="txt-add-later">+ Tahun Lebih Baru</span>
           <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
-      </div>
-      
-      <!-- OCR Upload Button -->
-      <div style="margin-left:auto; display:flex; align-items:center;">
-         <input type="file" id="ocrInput" accept="image/*" style="display:none;" onchange="uploadOcrImage()">
-         <button class="add-year-btn" onclick="document.getElementById('ocrInput').click()" id="btn-ocr" style="border-color:var(--accent); color:var(--accent);">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <span id="txt-ocr-btn">Scan Screenshot</span>
-         </button>
       </div>
     </div>
     <div style="overflow-x:auto;">
@@ -488,6 +489,7 @@
 
 </div>
 
+<script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
 <script>
 // ── i18n Translations ─────────────────────────────────────────────────────
 const T = {
@@ -791,10 +793,18 @@ let years = [];
 
 function initYears() {
   years = [];
-  for (let i = 4; i >= 0; i--) {
-    years.push(currentYear - 1 - i); // default: 5 years ending last year
+  // Initialize with descending years (newest first)
+  for (let i = 0; i < 5; i++) {
+    years.push(currentYear - 1 - i); 
   }
   renderTable();
+}
+
+function toggleSuitability() {
+  const content = document.getElementById('suitContent');
+  const toggle = document.getElementById('suitToggle');
+  content.classList.toggle('open');
+  toggle.classList.toggle('open');
 }
 
 // ── Table rendering ────────────────────────────────────────────────────────
@@ -868,17 +878,17 @@ function deleteRow(idx) {
 }
 
 function addYearEarlier() {
-  const firstYear = years[0];
-  years.unshift(firstYear - 1);
+  const lastYear = years[years.length - 1];
+  years.push(lastYear - 1);
   renderTable();
-  // Scroll table into view
-  document.getElementById('dataBody').closest('.table-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function addYearLater() {
-  const lastYear = years[years.length - 1];
-  years.push(lastYear + 1);
+  const firstYear = years[0];
+  years.unshift(firstYear + 1);
   renderTable();
+  // Scroll table into view
+  document.getElementById('dataBody').closest('.table-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function liveCalc(idx) {
@@ -947,70 +957,8 @@ function updatePlaceholder() {
   }
 }
 
-// ── OCR Upload ─────────────────────────────────────────────────────────────
-async function uploadOcrImage() {
-  const fileInput = document.getElementById('ocrInput');
-  const file = fileInput.files[0];
-  if (!file) return;
-
-  const btn = document.getElementById('btn-ocr');
-  const txt = document.getElementById('txt-ocr-btn');
-  // Store original text
-  const originalText = T[lang]['ocr-btn']; 
-  
-  txt.textContent = T[lang]['ocr-uploading'];
-  btn.disabled = true;
-
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    const res = await fetch('/api/ocr', {
-      method: 'POST',
-      body: formData
-    });
-    
-    const json = await res.json();
-    
-    if (!res.ok) {
-      throw new Error(json.error || 'Unknown error');
-    }
-    
-    // Process data
-    if (json.data && json.data.length > 0) {
-      const newDataYears = json.data.map(d => parseInt(d.year));
-      // Merge with existing years
-      years = [...new Set([...years, ...newDataYears])].sort((a,b) => b-a);
-      
-      renderTable();
-      
-      // Fill data
-      json.data.forEach(d => {
-        const idx = years.indexOf(parseInt(d.year));
-        if (idx === -1) return;
-        
-        if (d.ebit) document.getElementById(`ebit-${idx}`).value = d.ebit;
-        if (d.assets) document.getElementById(`assets-${idx}`).value = d.assets;
-        if (d.cl) document.getElementById(`currliab-${idx}`).value = d.cl;
-        
-        liveCalc(idx);
-      });
-      
-      alert(T[lang]['ocr-success']);
-      calculate();
-    } else {
-      alert('OCR completed but no relevant financial data found.');
-    }
-
-  } catch (err) {
-    console.error(err);
-    alert(T[lang]['ocr-error'] + err.message);
-  } finally {
-    txt.textContent = T[lang]['ocr-btn'];
-    btn.disabled = false;
-    fileInput.value = ''; // Reset
-  }
-}
+// ── OCR Upload (Removed) ───────────────────────────────────────────────────
+// async function uploadOcrImage() { ... }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function fmt(v) {
@@ -1052,7 +1000,12 @@ function calculate() {
   }
 
   // Sort most recent first
-  rows.sort((a, b) => b.year.localeCompare(a.year));
+  rows.sort((a, b) => {
+    // Extract year from "FY 2025" -> 2025
+    const ya = parseInt(a.year.replace(/\D/g, ''));
+    const yb = parseInt(b.year.replace(/\D/g, ''));
+    return yb - ya;
+  });
 
   const lat = rows[0];
   const lr = lat?.roce;
@@ -1061,8 +1014,12 @@ function calculate() {
   const passCount = validRoces.filter(r => r >= 20).length;
 
   // Header
-  document.getElementById('rName').textContent = code;
-  document.getElementById('rCode').textContent = `KLSE : ${code}`;
+  // Auto-fill company full name and stock code in results section
+  const source = document.getElementById('dataSource').value;
+  const stockName = document.getElementById('rName').dataset.fullName || document.getElementById('stockCode').value.trim().toUpperCase() || '—';
+  
+  document.getElementById('rName').textContent = stockName;
+  document.getElementById('rCode').textContent = `${source === 'stockanalysis' ? 'Ticker' : 'KLSE'} : ${code}`;
 
   // ROCE hero (UPDATED: Shows Average ROCE now)
   const rhv = document.getElementById('rhVal');
@@ -1166,19 +1123,27 @@ async function fetchData() {
       return;
     }
 
+    // Auto-fill company name if available
+    if (json.info && json.info.name) {
+      // We can update the stock code input or just store it for results
+      // Let's store it in a data attribute on the rName element for now, or update the input placeholder?
+      // Better: Update the rName directly when calculating
+      document.getElementById('rName').dataset.fullName = json.info.name;
+    }
+
     // Update years array
     years = json.data.map(d => parseInt(d.year));
     
     // Ensure at least 5 years
-    while (years.length < 5) {
-      const minYear = Math.min(...years);
-      years.push(minYear - 1);
-    }
-    
-    // Sort years descending
-    years.sort((a, b) => b - a);
+  while (years.length < 5) {
+    const minYear = Math.min(...years);
+    years.push(minYear - 1);
+  }
+  
+  // Sort years descending (newest top)
+  years.sort((a, b) => b - a);
 
-    renderTable(); 
+  renderTable(); 
 
     // Now fill data
     json.data.forEach((d) => {
