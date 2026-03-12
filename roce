@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KLSE ROCE Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0f0d; --surface:#111a14; --surface2:#162019; --surface3:#0d1510;
+    --border:#1e3024; --accent:#00e87a; --accent2:#00b85f;
+    --accent-dim:rgba(0,232,122,0.10); --accent-glow:rgba(0,232,122,0.22);
+    --text:#e8f5ec; --text-muted:#6b8f75; --text-dim:#3a5a44;
+    --warn:#ffb84d; --danger:#ff5c5c; --good:#00e87a;
+    --mono:'Space Mono',monospace; --sans:'DM Sans',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+  body::before{content:'';position:fixed;top:-150px;left:-150px;width:500px;height:500px;background:radial-gradient(circle,rgba(0,232,122,0.05) 0%,transparent 70%);pointer-events:none;z-index:0;}
+
+  .wrap{max-width:980px;margin:0 auto;padding:36px 20px;position:relative;z-index:1;}
+
+  /* ── Header ── */
+  .header{margin-bottom:28px;animation:fadeDown .5s ease both;}
+  .badge{display:inline-flex;align-items:center;gap:7px;background:var(--accent-dim);border:1px solid rgba(0,232,122,0.18);border-radius:4px;padding:4px 11px;font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;}
+  .badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite;}
+  h1{font-family:var(--mono);font-size:clamp(22px,3.5vw,38px);font-weight:700;margin-bottom:6px;}
+  h1 span{color:var(--accent);}
+  .sub{color:var(--text-muted);font-size:13px;line-height:1.65;}
+
+  /* ── How-to guide ── */
+  .guide{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:22px;animation:fadeUp .5s ease both;}
+  .guide-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .guide-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
+  .gstep{background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;}
+  .gnum{background:var(--accent);color:var(--bg);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px;}
+  .gtext{font-size:12px;color:var(--text-muted);line-height:1.5;}
+  .gtext strong{color:var(--text);display:block;margin-bottom:2px;font-size:12px;}
+  .link-btn{display:inline-flex;align-items:center;gap:5px;background:var(--accent-dim);border:1px solid rgba(0,232,122,0.2);border-radius:5px;padding:4px 10px;font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;margin-top:6px;transition:all .2s;}
+  .link-btn:hover{background:rgba(0,232,122,0.18);border-color:var(--accent);}
+
+  /* ── Stock input ── */
+  .stock-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:18px;animation:fadeUp .5s .05s ease both;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .stock-bar label{font-family:var(--mono);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);white-space:nowrap;}
+  .stock-input-wrap{position:relative;flex:1;min-width:180px;}
+  .spfx{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:11px;color:var(--text-dim);pointer-events:none;}
+  .stock-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 10px 10px 68px;font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);letter-spacing:2px;text-transform:uppercase;outline:none;transition:border-color .2s,box-shadow .2s;}
+  .stock-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+  .stock-input::placeholder{color:var(--text-dim);letter-spacing:1px;font-weight:400;}
+  .quick-tags{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+  .ql{font-size:10px;color:var(--text-dim);font-family:var(--mono);}
+  .qt{background:transparent;border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-family:var(--mono);font-size:10px;color:var(--text-muted);cursor:pointer;transition:all .2s;}
+  .qt:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+
+  /* ── Year table input ── */
+  .table-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:18px;animation:fadeUp .5s .1s ease both;}
+  .table-header{padding:14px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid var(--border);}
+  .table-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);}
+  .add-year-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-family:var(--mono);font-size:10px;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;}
+  .add-year-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+  .remove-year-btn{background:transparent;border:1px solid rgba(255,92,92,.2);border-radius:6px;padding:5px 12px;font-family:var(--mono);font-size:10px;color:rgba(255,92,92,.6);cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;}
+  .remove-year-btn:hover{border-color:var(--danger);color:var(--danger);}
+
+  .data-table{width:100%;border-collapse:collapse;}
+  .data-table th{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;background:var(--surface3);}
+  .data-table th .hint{display:block;font-size:8px;color:var(--text-dim);letter-spacing:0.5px;margin-top:2px;text-transform:none;font-weight:400;opacity:.7;}
+  .data-table td{padding:8px 8px;border-bottom:1px solid rgba(30,48,36,.4);}
+  .data-table tr:last-child td{border-bottom:none;}
+  .data-table tr:hover td{background:rgba(0,232,122,.02);}
+
+  .year-tag{display:inline-block;background:var(--accent-dim);border:1px solid rgba(0,232,122,.2);border-radius:4px;padding:2px 8px;font-family:var(--mono);font-size:10px;color:var(--accent);}
+
+  /* Editable year input */
+  .year-input{width:76px;background:var(--accent-dim);border:1px solid rgba(0,232,122,.3);border-radius:4px;padding:4px 6px;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent);text-align:center;outline:none;transition:border-color .2s,box-shadow .2s;-moz-appearance:textfield;}
+  .year-input::-webkit-outer-spin-button,.year-input::-webkit-inner-spin-button{-webkit-appearance:none;}
+  .year-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow);}
+
+  /* Delete row button */
+  .del-btn{background:transparent;border:1px solid rgba(255,92,92,.2);border-radius:4px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(255,92,92,.5);font-size:14px;transition:all .2s;flex-shrink:0;}
+  .del-btn:hover{border-color:var(--danger);color:var(--danger);background:rgba(255,92,92,.08);}
+
+  .num-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-family:var(--mono);font-size:12px;color:var(--text);outline:none;transition:border-color .2s;text-align:right;}
+  .num-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim);}
+  .num-input::placeholder{color:var(--text-dim);}
+  .num-input.error{border-color:var(--danger);}
+
+  .calc-cell{font-family:var(--mono);font-size:12px;font-weight:700;padding:7px 10px;text-align:right;}
+  .roce-cell{font-family:var(--mono);font-size:14px;font-weight:700;text-align:right;padding:7px 10px;}
+
+  /* ── Calc button ── */
+  .calc-row{display:flex;justify-content:flex-end;margin-bottom:18px;animation:fadeUp .5s .15s ease both;}
+  .calc-btn{background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:13px 28px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .2s,box-shadow .2s,transform .1s;}
+  .calc-btn:hover{background:var(--accent2);box-shadow:0 4px 20px var(--accent-glow);}
+  .calc-btn:active{transform:scale(0.98);}
+
+  /* ── Results ── */
+  .results{display:none;animation:fadeUp .4s ease both;}
+  .results.on{display:block;}
+
+  .result-header{background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 0 0;padding:20px 24px;border-bottom:none;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  .rname h2{font-family:var(--mono);font-size:18px;font-weight:700;margin-bottom:3px;}
+  .rcode{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:1px;}
+
+  .roce-hero{text-align:right;}
+  .rhlabel{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;}
+  .rhval{font-family:var(--mono);font-size:38px;font-weight:700;line-height:1;}
+  .rhval.g{color:var(--good);}.rhval.w{color:var(--warn);}.rhval.b{color:var(--danger);}
+  .rhbench{font-size:10px;color:var(--text-dim);margin-top:3px;}
+
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-top:none;border-bottom:none;}
+  .scard{background:var(--surface2);padding:14px 18px;}
+  .scard .sl{font-family:var(--mono);font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;}
+  .scard .sv{font-family:var(--mono);font-size:18px;font-weight:700;}
+  .scard .ss{font-size:10px;color:var(--text-muted);margin-top:2px;}
+
+  .result-table-box{background:var(--surface);border:1px solid var(--border);border-top:none;padding:20px 24px;}
+  .sec-label{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;}
+
+  .res-table{width:100%;border-collapse:collapse;}
+  .res-table th{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);}
+  .res-table td{padding:10px 8px;font-family:var(--mono);font-size:12px;border-bottom:1px solid rgba(30,48,36,.4);}
+  .res-table tr:last-child td{border-bottom:none;}
+  .res-table tr:hover td{background:rgba(0,232,122,.02);}
+
+  .bar-wrap{display:flex;align-items:center;gap:6px;}
+  .bar-bg{width:80px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;flex-shrink:0;}
+  .bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+  .rtag{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;letter-spacing:.5px;}
+  .tp{background:rgba(0,232,122,.12);color:var(--accent);border:1px solid rgba(0,232,122,.25);}
+  .tf{background:rgba(255,92,92,.1);color:var(--danger);border:1px solid rgba(255,92,92,.25);}
+  .tw{background:rgba(255,184,77,.1);color:var(--warn);border:1px solid rgba(255,184,77,.25);}
+
+  .verdict-box{margin-top:16px;padding:14px 16px;border-radius:8px;border-left:3px solid;}
+  .verdict-box.pass{border-color:var(--accent);background:rgba(0,232,122,.05);}
+  .verdict-box.warn{border-color:var(--warn);background:rgba(255,184,77,.05);}
+  .verdict-box.fail{border-color:var(--danger);background:rgba(255,92,92,.05);}
+  .vt{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+  .vd{font-size:12px;line-height:1.6;color:var(--text-muted);}
+
+  .formula-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:var(--mono);font-size:11px;margin-bottom:14px;}
+  .fn{background:rgba(0,232,122,.1);border:1px solid rgba(0,232,122,.25);color:var(--accent);padding:5px 10px;border-radius:5px;}
+  .fd{background:rgba(0,232,122,.04);border:1px solid var(--border);color:var(--text-muted);padding:5px 10px;border-radius:5px;}
+  .fo{color:var(--text-dim);font-size:15px;}
+  .fr{background:var(--accent);color:var(--bg);padding:5px 10px;border-radius:5px;font-weight:700;}
+
+  .note{margin-top:14px;padding:12px 16px;background:rgba(0,232,122,.03);border:1px solid rgba(0,232,122,.1);border-radius:8px;font-size:11px;color:var(--text-dim);line-height:1.6;}
+  .note strong{color:var(--text-muted);}
+
+  /* Reset btn */
+  .reset-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-family:var(--mono);font-size:10px;color:var(--text-muted);cursor:pointer;transition:all .2s;margin-top:14px;}
+  .reset-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* ── Suitability info box ── */
+  .suit-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:22px;animation:fadeUp .5s .08s ease both;}
+  .suit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
+  .suit-col{background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
+  .suit-col.good{border-color:rgba(0,232,122,.2);background:rgba(0,232,122,.03);}
+  .suit-col.bad{border-color:rgba(255,92,92,.2);background:rgba(255,92,92,.03);}
+  .suit-col.warn{border-color:rgba(255,184,77,.2);background:rgba(255,184,77,.03);}
+  .suit-title{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .suit-title.good{color:var(--good);}
+  .suit-title.bad{color:var(--danger);}
+  .suit-title.warn{color:var(--warn);}
+  .suit-items{display:flex;flex-direction:column;gap:4px;}
+  .suit-item{font-size:11px;color:var(--text-muted);line-height:1.5;display:flex;gap:6px;align-items:flex-start;}
+  .suit-item::before{flex-shrink:0;margin-top:1px;}
+  .suit-col.good .suit-item::before{content:'✓';color:var(--good);}
+  .suit-col.bad .suit-item::before{content:'✗';color:var(--danger);}
+  .suit-col.warn .suit-item::before{content:'⚠';color:var(--warn);}
+  .suit-note{margin-top:10px;font-size:10px;color:var(--text-dim);line-height:1.6;padding:8px 10px;background:var(--bg);border-radius:6px;border:1px solid var(--border);}
+  @media(max-width:560px){.suit-grid{grid-template-columns:1fr;}}
+  .lang-switcher{display:flex;align-items:center;gap:6px;margin-bottom:18px;animation:fadeDown .5s .1s ease both;}
+  .lang-label{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);}
+  .lang-btn{background:transparent;border:1px solid var(--border);border-radius:5px;padding:5px 12px;font-family:var(--mono);font-size:11px;color:var(--text-muted);cursor:pointer;transition:all .2s;letter-spacing:.5px;}
+  .lang-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+  .lang-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);font-weight:700;}
+  .lang-divider{color:var(--text-dim);font-size:11px;}
+
+  @keyframes fadeDown{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  @media(max-width:640px){
+    .stats-grid{grid-template-columns:1fr 1fr;}
+    .result-header{flex-direction:column;}
+    .roce-hero{text-align:left;}
+    .guide-steps{grid-template-columns:1fr;}
+    .stock-bar{flex-direction:column;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Language switcher -->
+  <div class="lang-switcher">
+    <span class="lang-label">语言 / Bahasa:</span>
+    <button class="lang-btn" id="btnZH" onclick="setLang('zh')">中文</button>
+    <span class="lang-divider">/</span>
+    <button class="lang-btn active" id="btnMS" onclick="setLang('ms')">Bahasa Malaysia</button>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="badge">KLSE · Bursa Malaysia · Manual Input</div>
+    <h1>ROCE<span>_</span>Calculator</h1>
+    <p class="sub" id="txt-subtitle">Masukkan data kewangan dari stockanalysis.com — program akan kira ROCE secara automatik untuk 5 tahun.</p>
+  </div>
+
+  <!-- How-to -->
+  <div class="guide">
+    <div class="guide-title">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      <span id="txt-guide-title">Cara Mendapatkan Data</span>
+    </div>
+    <div class="guide-steps">
+      <div class="gstep">
+        <div class="gnum">1</div>
+        <div class="gtext">
+          <strong id="txt-step1-title">Buka stockanalysis.com</strong>
+          <span id="txt-step1-desc">Cari saham anda (contoh: KLSE:MRDIY)</span>
+          <a class="link-btn" id="link-income" href="https://stockanalysis.com/quote/klse/MRDIY/financials/" target="_blank">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+            <span id="txt-link-income">Buka Income Statement</span>
+          </a>
+        </div>
+      </div>
+      <div class="gstep">
+        <div class="gnum">2</div>
+        <div class="gtext">
+          <strong id="txt-step2-title">Ambil "Operating Income"</strong>
+          <span id="txt-step2-desc">Dari tab Income Statement — ini adalah EBIT (RM juta)</span>
+        </div>
+      </div>
+      <div class="gstep">
+        <div class="gnum">3</div>
+        <div class="gtext">
+          <strong id="txt-step3-title">Ambil data Balance Sheet</strong>
+          <span id="txt-step3-desc">"Total Assets" dan "Total Current Liabilities"</span>
+          <a class="link-btn" id="link-balance" href="https://stockanalysis.com/quote/klse/MRDIY/financials/balance-sheet/" target="_blank">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+            <span id="txt-link-balance">Buka Balance Sheet</span>
+          </a>
+        </div>
+      </div>
+      <div class="gstep">
+        <div class="gnum">4</div>
+        <div class="gtext">
+          <strong id="txt-step4-title">Isi jadual di bawah</strong>
+          <span id="txt-step4-desc">Masukkan angka untuk setiap tahun, tekan "Kira ROCE"</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Suitability Notice -->
+  <div class="suit-box" id="suitBox">
+    <div class="guide-title" id="suit-main-title">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span id="txt-suit-title">Kesesuaian ROCE — Baca Sebelum Menggunakan</span>
+    </div>
+    <div class="suit-grid">
+      <div class="suit-col good">
+        <div class="suit-title good">
+          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="txt-suit-good-title">Sesuai Untuk</span>
+        </div>
+        <div class="suit-items" id="suit-good-items">
+          <div class="suit-item" id="sg1">Syarikat pengguna (consumer goods) — NESTLE, DLADY</div>
+          <div class="suit-item" id="sg2">Syarikat runcit (retail) — MRDIY, PADINI, AEON</div>
+          <div class="suit-item" id="sg3">Syarikat makanan & minuman — QLG, PWROOT, F&N</div>
+          <div class="suit-item" id="sg4">Syarikat perkilangan & perindustrian</div>
+          <div class="suit-item" id="sg5">Syarikat teknologi dengan aset tetap</div>
+        </div>
+      </div>
+      <div class="suit-col bad">
+        <div class="suit-title bad">
+          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span id="txt-suit-bad-title">Tidak Sesuai Untuk</span>
+        </div>
+        <div class="suit-items" id="suit-bad-items">
+          <div class="suit-item" id="sb1"><strong style="color:var(--text)">REITs</strong> — modal sangat tinggi, ROCE akan sentiasa rendah & mengelirukan</div>
+          <div class="suit-item" id="sb2"><strong style="color:var(--text)">Bank & kewangan</strong> — MAYBANK, PBBANK, RHB — guna ROE bukan ROCE</div>
+          <div class="suit-item" id="sb3"><strong style="color:var(--text)">Syarikat insurans</strong> — struktur modal berbeza sepenuhnya</div>
+          <div class="suit-item" id="sb4"><strong style="color:var(--text)">Syarikat baru / startup</strong> — EBIT negatif, ROCE tidak bermakna</div>
+          <div class="suit-item" id="sb5"><strong style="color:var(--text)">Syarikat perlombongan/O&G</strong> — modal sangat berat, ROCE semula jadi rendah</div>
+        </div>
+      </div>
+    </div>
+    <div class="suit-col warn" style="margin-top:10px;">
+      <div class="suit-title warn">
+        <svg width="10" height="10" fill="none" stroke="#ffb84d" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="txt-suit-warn-title">Perlu Diperhatikan</span>
+      </div>
+      <div class="suit-items" id="suit-warn-items">
+        <div class="suit-item" id="sw1">ROCE adalah data <strong style="color:var(--text)">sejarah</strong> — tidak mencerminkan prestasi masa depan</div>
+        <div class="suit-item" id="sw2">Bandingkan hanya syarikat dalam <strong style="color:var(--text)">industri yang sama</strong> — benchmark berbeza mengikut sektor</div>
+        <div class="suit-item" id="sw3">Syarikat dengan <strong style="color:var(--text)">simpanan tunai besar</strong> mungkin tunjuk ROCE rendah walaupun operasi cekap</div>
+        <div class="suit-item" id="sw4">Aset lama (sudah susut nilai penuh) boleh <strong style="color:var(--text)">mengelembungkan ROCE</strong> secara artifisial</div>
+        <div class="suit-item" id="sw5">Guna ROCE <strong style="color:var(--text)">bersama</strong> ROE, ROA, P/E — jangan bergantung pada satu metrik sahaja</div>
+      </div>
+    </div>
+    <div class="suit-note" id="txt-suit-note">
+      💡 <strong>Ringkasan:</strong> ROCE paling berguna untuk syarikat operasi biasa (bukan kewangan, bukan hartanah) yang boleh dibandingkan dalam industri yang sama. REITs dan bank perlukan metrik khas yang berbeza.
+    </div>
+  </div>
+
+  <!-- Stock code input -->
+  <div class="stock-bar">
+    <label id="txt-stock-label">Nama / Kod Saham</label>
+    <div class="stock-input-wrap">
+      <span class="spfx">KLSE :</span>
+      <input type="text" class="stock-input" id="stockCode" placeholder="cth. CARLSBG" maxlength="20"/>
+    </div>
+    <div class="quick-tags">
+      <span class="ql" id="txt-example">CONTOH:</span>
+      <span class="qt" onclick="setCode('CARLSBG')">CARLSBG</span>
+      <span class="qt" onclick="setCode('MRDIY')">MRDIY</span>
+      <span class="qt" onclick="setCode('HEIM')">HEIM</span>
+      <span class="qt" onclick="setCode('BAT')">BAT</span>
+      <span class="qt" onclick="setCode('NESTLE')">NESTLE</span>
+      <span class="qt" onclick="setCode('PETDAG')">PETDAG</span>
+      <span class="qt" onclick="setCode('PBBANK')">PBBANK</span>
+    </div>
+  </div>
+
+  <!-- Data entry table -->
+  <div class="table-card">
+    <div class="table-header">
+      <span class="table-title" id="txt-table-title">📊 Masukkan Data Kewangan (RM Juta)</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="add-year-btn" onclick="addYearEarlier()" id="btn-add-earlier">
+          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          <span id="txt-add-earlier">+ Tahun Lebih Awal</span>
+        </button>
+        <button class="add-year-btn" onclick="addYearLater()" id="btn-add-later">
+          <span id="txt-add-later">+ Tahun Lebih Baru</span>
+          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="dataTable">
+        <thead>
+          <tr>
+            <th id="th-year">Tahun</th>
+            <th id="th-ebit">Operating Income (EBIT)<span class="hint" id="th-ebit-hint">Income Statement → "Operating Income"</span></th>
+            <th id="th-assets">Total Assets<span class="hint" id="th-assets-hint">Balance Sheet → "Total Assets"</span></th>
+            <th id="th-cl">Current Liabilities<span class="hint" id="th-cl-hint">Balance Sheet → "Total Current Liabilities"</span></th>
+            <th id="th-ce">Capital Employed<span class="hint" id="th-ce-hint">Auto: Assets − Curr. Liab.</span></th>
+            <th id="th-roce">ROCE (%)<span class="hint" id="th-roce-hint">Auto: EBIT ÷ Cap.Emp × 100</span></th>
+            <th style="width:36px;"></th>
+          </tr>
+        </thead>
+        <tbody id="dataBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Calculate button -->
+  <div class="calc-row">
+    <button class="calc-btn" onclick="calculate()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span id="txt-calc-btn">KIRA ROCE</span>
+    </button>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="result-header">
+      <div class="rname">
+        <h2 id="rName">—</h2>
+        <div class="rcode" id="rCode">KLSE : —</div>
+      </div>
+      <div class="roce-hero">
+        <div class="rhlabel">ROCE TERKINI</div>
+        <div class="rhval" id="rhVal">—</div>
+        <div class="rhbench" id="rhBench">—</div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="scard"><div class="sl" id="txt-stat-ebit">EBIT Terkini</div><div class="sv" id="stEBIT">—</div><div class="ss">RM juta</div></div>
+      <div class="scard"><div class="sl" id="txt-stat-ce">Capital Employed</div><div class="sv" id="stCE">—</div><div class="ss">RM juta</div></div>
+      <div class="scard"><div class="sl" id="txt-stat-pass">Tahun Lulus (≥20%)</div><div class="sv" id="stPass">—</div><div class="ss" id="stPassSub">daripada — tahun</div></div>
+      <div class="scard"><div class="sl" id="txt-stat-avg">ROCE Purata</div><div class="sv" id="stAvg">—</div><div class="ss" id="txt-stat-avg-sub">purata semua tahun</div></div>
+    </div>
+
+    <div class="result-table-box">
+      <div class="sec-label" id="txt-formula-label">Formula & Pengiraan Terperinci</div>
+      <div class="formula-row" id="formulaRow">
+        <div class="fn" id="fEBIT">—</div>
+        <div class="fo">÷</div>
+        <div class="fd" id="fCE">—</div>
+        <div class="fo">×100 =</div>
+        <div class="fr" id="fRES">—</div>
+        <span style="color:var(--text-dim);font-size:10px;" id="txt-latest-year">(tahun terkini)</span>
+      </div>
+
+      <div class="sec-label" id="txt-history-label">Sejarah ROCE</div>
+      <table class="res-table">
+        <thead>
+          <tr>
+            <th id="rth-year">Tahun</th>
+            <th id="rth-ebit">EBIT (RM Mil)</th>
+            <th id="rth-assets">Total Assets</th>
+            <th id="rth-cl">Curr. Liab.</th>
+            <th id="rth-ce">Cap. Employed</th>
+            <th id="rth-roce">ROCE</th>
+            <th id="rth-trend">Trend</th>
+            <th id="rth-status">Status</th>
+          </tr>
+        </thead>
+        <tbody id="resBody"></tbody>
+      </table>
+
+      <div class="verdict-box" id="verdictBox">
+        <div class="vt" id="verdictTitle">—</div>
+        <div class="vd" id="verdictText">—</div>
+      </div>
+
+      <div class="note">
+        <strong id="txt-note-label">📋 Formula:</strong> <span id="txt-note-body">ROCE = Operating Income (EBIT) ÷ (Total Assets − Current Liabilities) × 100<br>
+        Data dimasukkan secara manual dari <strong>stockanalysis.com</strong>. <strong>Bukan nasihat pelaburan.</strong></span>
+      </div>
+
+      <button class="reset-btn" onclick="resetResults()" id="txt-reset-btn">↺ Kira Semula</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── i18n Translations ─────────────────────────────────────────────────────
+const T = {
+  ms: {
+    subtitle: 'Masukkan data kewangan dari stockanalysis.com — program akan kira ROCE secara automatik untuk 5 tahun.',
+    'guide-title': 'Cara Mendapatkan Data',
+    'step1-title': 'Buka stockanalysis.com',
+    'step1-desc': 'Cari saham anda (contoh: KLSE:MRDIY)',
+    'link-income': 'Buka Income Statement',
+    'step2-title': 'Ambil "Operating Income"',
+    'step2-desc': 'Dari tab Income Statement — ini adalah EBIT (RM juta)',
+    'step3-title': 'Ambil data Balance Sheet',
+    'step3-desc': '"Total Assets" dan "Total Current Liabilities"',
+    'link-balance': 'Buka Balance Sheet',
+    'step4-title': 'Isi jadual di bawah',
+    'step4-desc': 'Masukkan angka untuk setiap tahun, tekan "Kira ROCE"',
+    'stock-label': 'Nama / Kod Saham',
+    'example': 'CONTOH:',
+    'table-title': '📊 Masukkan Data Kewangan (RM Juta)',
+    'remove-year': 'Buang Tahun',
+    'add-year': 'Tambah Tahun',
+    'add-earlier': '+ Tahun Lebih Awal',
+    'add-later': '+ Tahun Lebih Baru',
+    'th-year': 'Tahun',
+    'th-ebit': 'Operating Income (EBIT)',
+    'th-ebit-hint': 'Income Statement → "Operating Income"',
+    'th-assets': 'Total Assets',
+    'th-assets-hint': 'Balance Sheet → "Total Assets"',
+    'th-cl': 'Current Liabilities',
+    'th-cl-hint': 'Balance Sheet → "Total Current Liabilities"',
+    'th-ce': 'Capital Employed',
+    'th-ce-hint': 'Auto: Assets − Curr. Liab.',
+    'th-roce': 'ROCE (%)',
+    'th-roce-hint': 'Auto: EBIT ÷ Cap.Emp × 100',
+    'calc-btn': 'KIRA ROCE',
+    'stat-ebit': 'EBIT Terkini',
+    'stat-ce': 'Capital Employed',
+    'stat-pass': 'Tahun Lulus (≥20%)',
+    'stat-avg': 'ROCE Purata',
+    'stat-avg-sub': 'purata semua tahun',
+    'formula-label': 'Formula & Pengiraan Terperinci',
+    'latest-year': '(tahun terkini)',
+    'history-label': 'Sejarah ROCE',
+    'rth-year': 'Tahun', 'rth-ebit': 'EBIT (RM Mil)', 'rth-assets': 'Total Assets',
+    'rth-cl': 'Curr. Liab.', 'rth-ce': 'Cap. Employed', 'rth-roce': 'ROCE',
+    'rth-trend': 'Trend', 'rth-status': 'Status',
+    'note-label': '📋 Formula:',
+    'note-body': 'ROCE = Operating Income (EBIT) ÷ (Total Assets − Current Liabilities) × 100<br>Data dimasukkan secara manual dari <strong>stockanalysis.com</strong>. <strong>Bukan nasihat pelaburan.</strong>',
+    'reset-btn': '↺ Kira Semula',
+    'rhbench-good': '✓ Melebihi penanda aras 20%',
+    'rhbench-warn': '~ Sederhana (10–20%)',
+    'rhbench-bad': '✗ Di bawah penanda aras 20%',
+    // Suitability box
+    'suit-title': 'Kesesuaian ROCE — Baca Sebelum Menggunakan',
+    'suit-good-title': 'Sesuai Untuk',
+    'suit-bad-title': 'Tidak Sesuai Untuk',
+    'suit-warn-title': 'Perlu Diperhatikan',
+    'suit-note': '💡 <strong>Ringkasan:</strong> ROCE paling berguna untuk syarikat operasi biasa (bukan kewangan, bukan hartanah) yang boleh dibandingkan dalam industri yang sama. REITs dan bank perlukan metrik khas yang berbeza.',
+    'stat-pass-sub': (p, t) => `daripada ${t} tahun`,
+    'verdict-pass-title': (p, t) => `✓ LULUS PENUH — ${p}/${t} tahun ROCE ≥ 20%`,
+    'verdict-warn-title': (p, t) => `~ SEDERHANA — ${p}/${t} tahun ROCE ≥ 20%`,
+    'verdict-fail-title': (p, t) => `✗ TIDAK LULUS — ${p}/${t} tahun ROCE ≥ 20%`,
+    'verdict-pass-text': (code, t) => `${code} menunjukkan ROCE melebihi 20% secara konsisten. Ini menandakan syarikat dengan kelebihan kompetitif yang kukuh dan penggunaan modal yang sangat cekap.`,
+    'verdict-warn-text': (code, p, t) => `${code} mencapai ROCE ≥ 20% dalam ${p} daripada ${t} tahun. Prestasi tidak sepenuhnya konsisten — semak faktor yang menyebabkan penurunan.`,
+    'verdict-fail-text': (code, p, t) => `${code} hanya mencapai ROCE ≥ 20% dalam ${p} daripada ${t} tahun. Kecekapan penggunaan modal masih rendah berbanding penanda aras.`,
+    'alert-no-data': 'Sila masukkan sekurang-kurangnya satu baris data penuh (EBIT, Total Assets, Current Liabilities).',
+    'input-placeholder': 'cth.',
+    'tag-pass': '✓ LULUS', 'tag-warn': '~ MARGINAL', 'tag-fail': '✗ GAGAL',
+  },
+  zh: {
+    subtitle: '从 stockanalysis.com 输入财务数据 — 程序将自动计算 5 年的 ROCE。',
+    'guide-title': '如何获取数据',
+    'step1-title': '打开 stockanalysis.com',
+    'step1-desc': '搜索你的股票（例如：KLSE:MRDIY）',
+    'link-income': '打开损益表',
+    'step2-title': '获取"营业收入"',
+    'step2-desc': '在 Income Statement 页面找到 "Operating Income" — 即 EBIT（单位：百万令吉）',
+    'step3-title': '获取资产负债表数据',
+    'step3-desc': '"Total Assets"（总资产）和 "Total Current Liabilities"（流动负债）',
+    'link-balance': '打开资产负债表',
+    'step4-title': '填写下方表格',
+    'step4-desc': '输入每年的数据，然后点击"计算 ROCE"',
+    'stock-label': '股票名称 / 代码',
+    'example': '示例：',
+    'table-title': '📊 输入财务数据（单位：百万令吉 RM）',
+    'remove-year': '删除年份',
+    'add-year': '添加年份',
+    'add-earlier': '+ 添加更早年份',
+    'add-later': '+ 添加更新年份',
+    'th-year': '年份',
+    'th-ebit': '营业收入 EBIT',
+    'th-ebit-hint': '损益表 → "Operating Income"',
+    'th-assets': '总资产',
+    'th-assets-hint': '资产负债表 → "Total Assets"',
+    'th-cl': '流动负债',
+    'th-cl-hint': '资产负债表 → "Total Current Liabilities"',
+    'th-ce': '已动用资本',
+    'th-ce-hint': '自动计算：总资产 − 流动负债',
+    'th-roce': 'ROCE (%)',
+    'th-roce-hint': '自动计算：EBIT ÷ 已动用资本 × 100',
+    'calc-btn': '计算 ROCE',
+    'stat-ebit': '最新 EBIT',
+    'stat-ce': '已动用资本',
+    'stat-pass': '达标年数（≥20%）',
+    'stat-avg': '平均 ROCE',
+    'stat-avg-sub': '所有年份平均值',
+    'formula-label': '计算公式与详细数据',
+    'latest-year': '（最新年份）',
+    'history-label': 'ROCE 历史记录',
+    'rth-year': '年份', 'rth-ebit': 'EBIT（百万令吉）', 'rth-assets': '总资产',
+    'rth-cl': '流动负债', 'rth-ce': '已动用资本', 'rth-roce': 'ROCE',
+    'rth-trend': '趋势', 'rth-status': '状态',
+    'note-label': '📋 公式说明：',
+    'note-body': 'ROCE = 营业收入（EBIT）÷（总资产 − 流动负债）× 100<br>数据手动输入自 <strong>stockanalysis.com</strong>。<strong>非投资建议。</strong>',
+    'reset-btn': '↺ 重新计算',
+    'rhbench-good': '✓ 超越 20% 基准',
+    'rhbench-warn': '~ 一般（10–20%）',
+    'rhbench-bad': '✗ 低于 20% 基准',
+    // Suitability box
+    'suit-title': 'ROCE 适用范围 — 使用前请阅读',
+    'suit-good-title': '✓ 适合用于',
+    'suit-bad-title': '✗ 不适合用于',
+    'suit-warn-title': '⚠ 注意事项',
+    'suit-note': '💡 <strong>总结：</strong>ROCE 最适合用于一般经营性企业（非金融、非房地产），且必须在同行业内比较才有意义。REITs 和银行股需使用专属指标。',
+    'stat-pass-sub': (p, t) => `共 ${t} 年中达标`,
+    'verdict-pass-title': (p, t) => `✓ 全部达标 — ${p}/${t} 年 ROCE ≥ 20%`,
+    'verdict-warn-title': (p, t) => `~ 表现一般 — ${p}/${t} 年 ROCE ≥ 20%`,
+    'verdict-fail-title': (p, t) => `✗ 未达标 — ${p}/${t} 年 ROCE ≥ 20%`,
+    'verdict-pass-text': (code, t) => `${code} 连续 ${t} 年 ROCE 均超过 20%，显示该公司拥有稳固的竞争优势和高效的资本运用能力。`,
+    'verdict-warn-text': (code, p, t) => `${code} 在 ${t} 年中有 ${p} 年达到 ROCE ≥ 20%，表现不够稳定，建议深入分析下滑原因。`,
+    'verdict-fail-text': (code, p, t) => `${code} 在 ${t} 年中仅 ${p} 年达到 ROCE ≥ 20%，资本使用效率相对较低，需进一步审查。`,
+    'alert-no-data': '请至少填写一行完整数据（EBIT、总资产、流动负债）。',
+    'input-placeholder': '例如',
+    'tag-pass': '✓ 达标', 'tag-warn': '~ 边缘', 'tag-fail': '✗ 未达标',
+  }
+};
+
+let lang = 'ms';
+
+function setLang(l) {
+  lang = l;
+  document.getElementById('btnZH').classList.toggle('active', l === 'zh');
+  document.getElementById('btnMS').classList.toggle('active', l === 'ms');
+  const t = T[l];
+
+  // Update all text nodes
+  const ids = [
+    'txt-subtitle','txt-guide-title','txt-step1-title','txt-step1-desc',
+    'txt-link-income','txt-step2-title','txt-step2-desc','txt-step3-title',
+    'txt-step3-desc','txt-link-balance','txt-step4-title','txt-step4-desc',
+    'txt-stock-label','txt-example','txt-table-title','txt-remove-year',
+    'txt-add-year','txt-add-earlier','txt-add-later','th-year','th-ebit','th-ebit-hint','th-assets',
+    'th-assets-hint','th-cl','th-cl-hint','th-ce','th-ce-hint',
+    'th-roce','th-roce-hint','txt-calc-btn','txt-stat-ebit','txt-stat-ce',
+    'txt-stat-pass','txt-stat-avg','txt-stat-avg-sub','txt-formula-label',
+    'txt-latest-year','txt-history-label','rth-year','rth-ebit','rth-assets',
+    'rth-cl','rth-ce','rth-roce','rth-trend','rth-status',
+    'txt-note-label','txt-reset-btn'
+  ];
+
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const key = id.replace('txt-','').replace('th-','th-').replace('rth-','rth-');
+    // map element id to translation key
+    const tkey = id.startsWith('txt-') ? id.slice(4) : id;
+    if (t[tkey] !== undefined && typeof t[tkey] === 'string') {
+      el.textContent = t[tkey];
+    }
+  });
+
+  // note-body uses innerHTML
+  const nb = document.getElementById('txt-note-body');
+  if (nb) nb.innerHTML = t['note-body'];
+
+  // Suitability box
+  const suitTexts = {
+    ms: {
+      title: 'Kesesuaian ROCE — Baca Sebelum Menggunakan',
+      goodTitle: '✓ Sesuai Untuk',
+      badTitle: '✗ Tidak Sesuai Untuk',
+      warnTitle: '⚠ Perlu Diperhatikan',
+      good: [
+        'Syarikat pengguna (consumer goods) — NESTLE, DLADY, F&N',
+        'Syarikat runcit (retail) — MRDIY, PADINI, AEON',
+        'Syarikat makanan & minuman — QLG, PWROOT',
+        'Syarikat perkilangan & perindustrian',
+        'Syarikat teknologi dengan aset tetap',
+      ],
+      bad: [
+        '<strong style="color:var(--text)">REITs</strong> — modal sangat tinggi, ROCE rendah & mengelirukan',
+        '<strong style="color:var(--text)">Bank & kewangan</strong> — MAYBANK, PBBANK — guna ROE, bukan ROCE',
+        '<strong style="color:var(--text)">Syarikat insurans</strong> — struktur modal berbeza sepenuhnya',
+        '<strong style="color:var(--text)">Syarikat baru / startup</strong> — EBIT negatif, ROCE tidak bermakna',
+        '<strong style="color:var(--text)">Perlombongan / O&G</strong> — modal sangat berat, ROCE semula jadi rendah',
+      ],
+      warn: [
+        'ROCE adalah data <strong style="color:var(--text)">sejarah</strong> — tidak mencerminkan prestasi masa depan',
+        'Bandingkan hanya dalam <strong style="color:var(--text)">industri yang sama</strong> — benchmark berbeza mengikut sektor',
+        'Syarikat dengan <strong style="color:var(--text)">tunai besar</strong> mungkin tunjuk ROCE rendah walaupun operasi cekap',
+        'Aset lama yang susut nilai boleh <strong style="color:var(--text)">mengelembungkan ROCE</strong> secara artifisial',
+        'Guna ROCE <strong style="color:var(--text)">bersama</strong> ROE, ROA, P/E — jangan bergantung satu metrik sahaja',
+      ],
+      note: '💡 <strong>Ringkasan:</strong> ROCE paling berguna untuk syarikat operasi biasa (bukan kewangan, bukan hartanah) yang boleh dibandingkan dalam industri yang sama. REITs dan bank perlukan metrik khas yang berbeza.',
+    },
+    zh: {
+      title: 'ROCE 适用范围 — 使用前请阅读',
+      goodTitle: '✓ 适合用于',
+      badTitle: '✗ 不适合用于',
+      warnTitle: '⚠ 注意事项',
+      good: [
+        '消费品公司 — NESTLE、DLADY、F&N',
+        '零售公司 — MRDIY、PADINI、AEON',
+        '食品饮料公司 — QLG、PWROOT',
+        '制造业与工业类公司',
+        '拥有固定资产的科技公司',
+      ],
+      bad: [
+        '<strong style="color:var(--text)">REITs（产托）</strong> — 资产极重，ROCE 会极低且具误导性',
+        '<strong style="color:var(--text)">银行与金融股</strong> — MAYBANK、PBBANK — 应用 ROE，而非 ROCE',
+        '<strong style="color:var(--text)">保险公司</strong> — 资本结构完全不同',
+        '<strong style="color:var(--text)">新公司 / 初创企业</strong> — EBIT 为负，ROCE 无意义',
+        '<strong style="color:var(--text)">采矿 / 油气公司</strong> — 资产极重，ROCE 天生偏低',
+      ],
+      warn: [
+        'ROCE 是<strong style="color:var(--text)">历史数据</strong> — 无法预测未来表现',
+        '只能在<strong style="color:var(--text)">同行业内</strong>比较 — 不同行业基准不同',
+        '持有大量<strong style="color:var(--text)">闲置现金</strong>的公司 ROCE 会偏低，即使运营效率高',
+        '已折旧完毕的旧资产可能<strong style="color:var(--text)">人为拉高 ROCE</strong>',
+        '应将 ROCE 与 <strong style="color:var(--text)">ROE、ROA、P/E</strong> 结合使用，勿单独依赖',
+      ],
+      note: '💡 <strong>总结：</strong>ROCE 最适合用于一般经营性企业（非金融、非房地产），且必须在同行业内比较才有意义。REITs 和银行股需使用专属指标（如 ROE、DPU Yield）。',
+    },
+  };
+
+  const st = suitTexts[l];
+  const setHtml = (id, html) => { const el = document.getElementById(id); if(el) el.innerHTML = html; };
+  const setText = (id, txt) => { const el = document.getElementById(id); if(el) el.textContent = txt; };
+
+  setText('txt-suit-title', st.title);
+  setText('txt-suit-good-title', st.goodTitle);
+  setText('txt-suit-bad-title', st.badTitle);
+  setText('txt-suit-warn-title', st.warnTitle);
+  setHtml('txt-suit-note', st.note);
+
+  // Render good/bad/warn items
+  ['suit-good-items','suit-bad-items','suit-warn-items'].forEach((containerId, ci) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const items = ci === 0 ? st.good : ci === 1 ? st.bad : st.warn;
+    container.innerHTML = items.map(item => `<div class="suit-item">${item}</div>`).join('');
+  });
+
+  // Re-render table to update placeholders
+  renderTable();
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+const currentYear = new Date().getFullYear();
+let years = [];
+
+function initYears() {
+  years = [];
+  for (let i = 4; i >= 0; i--) {
+    years.push(currentYear - 1 - i); // default: 5 years ending last year
+  }
+  renderTable();
+}
+
+// ── Table rendering ────────────────────────────────────────────────────────
+function renderTable() {
+  // Save existing input values before re-render
+  const saved = {};
+  years.forEach((yr, idx) => {
+    saved[idx] = {
+      ebit: document.getElementById(`ebit-${idx}`)?.value || '',
+      assets: document.getElementById(`assets-${idx}`)?.value || '',
+      cl: document.getElementById(`currliab-${idx}`)?.value || '',
+    };
+  });
+
+  const tbody = document.getElementById('dataBody');
+  tbody.innerHTML = '';
+  const t = T[lang];
+
+  years.forEach((yr, idx) => {
+    const tr = document.createElement('tr');
+    tr.id = `row-${idx}`;
+    tr.innerHTML = `
+      <td>
+        <input type="number" class="year-input" id="year-${idx}" value="${yr}" min="1990" max="2099"
+          title="${lang === 'zh' ? '点击编辑年份' : 'Klik untuk edit tahun'}" />
+      </td>
+      <td><input type="number" class="num-input" id="ebit-${idx}" placeholder="${t['input-placeholder']} 828.7" step="0.1"/></td>
+      <td><input type="number" class="num-input" id="assets-${idx}" placeholder="${t['input-placeholder']} 3800.0" step="0.1" min="0"/></td>
+      <td><input type="number" class="num-input" id="currliab-${idx}" placeholder="${t['input-placeholder']} 635.0" step="0.1" min="0"/></td>
+      <td><div class="calc-cell" id="ce-${idx}" style="color:var(--text-muted)">—</div></td>
+      <td><div class="roce-cell" id="roce-${idx}" style="color:var(--text-muted)">—</div></td>
+      <td><button class="del-btn" onclick="deleteRow(${idx})" title="${lang === 'zh' ? '删除此行' : 'Padam baris ini'}">✕</button></td>`;
+    tbody.appendChild(tr);
+
+    // Restore saved values
+    if (saved[idx]) {
+      if (saved[idx].ebit) document.getElementById(`ebit-${idx}`).value = saved[idx].ebit;
+      if (saved[idx].assets) document.getElementById(`assets-${idx}`).value = saved[idx].assets;
+      if (saved[idx].cl) document.getElementById(`currliab-${idx}`).value = saved[idx].cl;
+    }
+
+    // Live calc on number inputs
+    ['ebit', 'assets', 'currliab'].forEach(field => {
+      document.getElementById(`${field}-${idx}`).addEventListener('input', () => liveCalc(idx));
+    });
+
+    // Year input: update years array on change
+    document.getElementById(`year-${idx}`).addEventListener('change', (e) => {
+      const newYr = parseInt(e.target.value);
+      if (!isNaN(newYr) && newYr >= 1990 && newYr <= 2099) {
+        years[idx] = newYr;
+      } else {
+        e.target.value = years[idx]; // revert if invalid
+      }
+    });
+
+    // Restore live calc display
+    if (saved[idx]?.ebit || saved[idx]?.assets || saved[idx]?.cl) {
+      liveCalc(idx);
+    }
+  });
+}
+
+function deleteRow(idx) {
+  if (years.length <= 1) {
+    alert(lang === 'zh' ? '至少需要保留一行数据。' : 'Perlu sekurang-kurangnya satu baris data.');
+    return;
+  }
+  years.splice(idx, 1);
+  renderTable();
+}
+
+function addYearEarlier() {
+  const firstYear = years[0];
+  years.unshift(firstYear - 1);
+  renderTable();
+  // Scroll table into view
+  document.getElementById('dataBody').closest('.table-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function addYearLater() {
+  const lastYear = years[years.length - 1];
+  years.push(lastYear + 1);
+  renderTable();
+}
+
+function liveCalc(idx) {
+  const ebit = parseFloat(document.getElementById(`ebit-${idx}`)?.value);
+  const assets = parseFloat(document.getElementById(`assets-${idx}`)?.value);
+  const cl = parseFloat(document.getElementById(`currliab-${idx}`)?.value);
+  const ceEl = document.getElementById(`ce-${idx}`);
+  const roceEl = document.getElementById(`roce-${idx}`);
+  if (!ceEl || !roceEl) return;
+
+  if (!isNaN(assets) && !isNaN(cl)) {
+    const ce = assets - cl;
+    ceEl.textContent = fmt(ce);
+    ceEl.style.color = 'var(--text)';
+    if (!isNaN(ebit) && ce > 0) {
+      const roce = (ebit / ce) * 100;
+      roceEl.textContent = roce.toFixed(1) + '%';
+      roceEl.style.color = bc(roce);
+      roceEl.style.fontWeight = '700';
+    } else {
+      roceEl.textContent = '—';
+      roceEl.style.color = 'var(--text-dim)';
+    }
+  } else {
+    ceEl.textContent = '—'; ceEl.style.color = 'var(--text-dim)';
+    roceEl.textContent = '—'; roceEl.style.color = 'var(--text-dim)';
+  }
+}
+
+function setCode(c) {
+  document.getElementById('stockCode').value = c;
+  // Update links in guide
+  document.querySelectorAll('.link-btn').forEach((a, i) => {
+    if (i === 0) a.href = `https://stockanalysis.com/quote/klse/${c}/financials/`;
+    if (i === 1) a.href = `https://stockanalysis.com/quote/klse/${c}/financials/balance-sheet/`;
+  });
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function fmt(v) {
+  if (v == null || isNaN(v)) return '—';
+  return Number(v).toLocaleString('en-MY', { maximumFractionDigits: 1 });
+}
+function bc(r) { return r >= 20 ? '#00e87a' : r >= 10 ? '#ffb84d' : '#ff5c5c'; }
+function tag(r) {
+  const t = T[lang];
+  if (r == null || isNaN(r)) return '<span class="rtag tw">N/A</span>';
+  if (r >= 20) return `<span class="rtag tp">${t['tag-pass']}</span>`;
+  if (r >= 10) return `<span class="rtag tw">${t['tag-warn']}</span>`;
+  return `<span class="rtag tf">${t['tag-fail']}</span>`;
+}
+
+// ── Calculate & Render Results ─────────────────────────────────────────────
+function calculate() {
+  const code = document.getElementById('stockCode').value.trim().toUpperCase() || '—';
+
+  // Collect data
+  const rows = [];
+  let hasData = false;
+  years.forEach((yr, idx) => {
+    const yearVal = parseInt(document.getElementById(`year-${idx}`)?.value) || yr;
+    const ebit = parseFloat(document.getElementById(`ebit-${idx}`).value);
+    const assets = parseFloat(document.getElementById(`assets-${idx}`).value);
+    const cl = parseFloat(document.getElementById(`currliab-${idx}`).value);
+    if (!isNaN(ebit) && !isNaN(assets) && !isNaN(cl)) {
+      const ce = assets - cl;
+      const roce = ce > 0 ? (ebit / ce) * 100 : null;
+      rows.push({ year: `FY ${yearVal}`, ebit, totalAssets: assets, currentLiabilities: cl, capitalEmployed: ce, roce: roce ? Math.round(roce * 10) / 10 : null });
+      hasData = true;
+    }
+  });
+
+  if (!hasData) {
+    alert(T[lang]['alert-no-data']);
+    return;
+  }
+
+  // Sort most recent first
+  rows.sort((a, b) => b.year.localeCompare(a.year));
+
+  const lat = rows[0];
+  const lr = lat?.roce;
+  const validRoces = rows.filter(r => r.roce != null).map(r => r.roce);
+  const avgRoce = validRoces.length ? validRoces.reduce((a,b) => a+b, 0) / validRoces.length : null;
+  const passCount = validRoces.filter(r => r >= 20).length;
+
+  // Header
+  document.getElementById('rName').textContent = code;
+  document.getElementById('rCode').textContent = `KLSE : ${code}`;
+
+  // ROCE hero
+  const rhv = document.getElementById('rhVal');
+  rhv.textContent = lr != null ? `${lr.toFixed(1)}%` : 'N/A';
+  rhv.className = 'rhval ' + (lr >= 20 ? 'g' : lr >= 10 ? 'w' : 'b');
+  document.getElementById('rhBench').textContent =
+    lr >= 20 ? T[lang]['rhbench-good'] :
+    lr >= 10 ? T[lang]['rhbench-warn'] : T[lang]['rhbench-bad'];
+
+  // Stats
+  document.getElementById('stEBIT').textContent = fmt(lat?.ebit);
+  document.getElementById('stCE').textContent = fmt(lat?.capitalEmployed);
+  document.getElementById('stPass').textContent = passCount;
+  document.getElementById('stPassSub').textContent = T[lang]['stat-pass-sub'](passCount, rows.length);
+  document.getElementById('stAvg').textContent = avgRoce != null ? avgRoce.toFixed(1) + '%' : '—';
+
+  // Formula
+  document.getElementById('fEBIT').textContent = lat ? `RM ${fmt(lat.ebit)}M` : '—';
+  document.getElementById('fCE').textContent = lat ? `RM ${fmt(lat.capitalEmployed)}M` : '—';
+  document.getElementById('fRES').textContent = lr != null ? `${lr.toFixed(1)}%` : '—';
+
+  // Table
+  const tbody = document.getElementById('resBody');
+  tbody.innerHTML = '';
+  const maxR = Math.max(...validRoces, 30);
+  rows.forEach((row, i) => {
+    const bw = row.roce ? Math.min((row.roce / maxR) * 100, 100) : 0;
+    // Trend arrow
+    let trend = '—';
+    if (i < rows.length - 1 && row.roce != null && rows[i+1].roce != null) {
+      trend = row.roce > rows[i+1].roce ? '<span style="color:#00e87a">↑</span>' : row.roce < rows[i+1].roce ? '<span style="color:#ff5c5c">↓</span>' : '<span style="color:#6b8f75">→</span>';
+    }
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:var(--text);font-weight:700">${row.year}</td>
+      <td style="color:var(--text-muted)">${fmt(row.ebit)}</td>
+      <td style="color:var(--text-muted)">${fmt(row.totalAssets)}</td>
+      <td style="color:var(--text-muted)">${fmt(row.currentLiabilities)}</td>
+      <td style="color:var(--text-muted)">${fmt(row.capitalEmployed)}</td>
+      <td style="color:${bc(row.roce)};font-weight:700">${row.roce != null ? row.roce.toFixed(1) + '%' : '—'}</td>
+      <td style="text-align:center">${trend}</td>
+      <td>${tag(row.roce)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Verdict
+  const vb = document.getElementById('verdictBox');
+  const vt = document.getElementById('verdictTitle');
+  const vd = document.getElementById('verdictText');
+  if (passCount === rows.length) {
+    vb.className = 'verdict-box pass'; vt.style.color = 'var(--good)';
+    vt.textContent = T[lang]['verdict-pass-title'](passCount, rows.length);
+    vd.textContent = T[lang]['verdict-pass-text'](code, rows.length);
+  } else if (passCount >= Math.ceil(rows.length / 2)) {
+    vb.className = 'verdict-box warn'; vt.style.color = 'var(--warn)';
+    vt.textContent = T[lang]['verdict-warn-title'](passCount, rows.length);
+    vd.textContent = T[lang]['verdict-warn-text'](code, passCount, rows.length);
+  } else {
+    vb.className = 'verdict-box fail'; vt.style.color = 'var(--danger)';
+    vt.textContent = T[lang]['verdict-fail-title'](passCount, rows.length);
+    vd.textContent = T[lang]['verdict-fail-text'](code, passCount, rows.length);
+  }
+
+  document.getElementById('results').classList.add('on');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetResults() {
+  document.getElementById('results').classList.remove('on');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+initYears();
+</script>
+</body>
+</html>
