@@ -460,30 +460,66 @@
       <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       <span id="txt-scan-title">AUTO SCANNER</span>
     </div>
-    <div style="margin-top: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-      <label style="font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
-        <span id="txt-scan-min-roce">Min ROCE (%)</span>
-      </label>
-      <input type="number" id="scanMinRoce" value="20" placeholder="20" style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: var(--mono);">
+    <div style="margin-top: 12px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label style="font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
+          <span id="txt-scan-min-roce">Min ROCE (%)</span>
+        </label>
+        <input type="number" id="scanMinRoce" value="20" placeholder="20" style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: var(--mono);">
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <input type="checkbox" id="deepScan" style="cursor: pointer;">
+        <label for="deepScan" style="font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; cursor: pointer;">
+          <span id="txt-deep-scan">Deep Scan (4 Years ≥ 20%)</span>
+        </label>
+      </div>
       
-      <button onclick="scanMarket()" id="scanBtn" style="background: var(--accent); color: var(--bg); border: none; padding: 6px 14px; border-radius: 4px; font-family: var(--mono); font-size: 11px; font-weight: 700; cursor: pointer;">
-        <span id="txt-scan-btn">SCAN MARKET</span>
+      <button onclick="startNewScan()" id="scanBtn" style="background: var(--accent); color: var(--bg); border: none; padding: 8px 18px; border-radius: 4px; font-family: var(--mono); font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+        <span id="txt-scan-btn">START SCAN</span>
+      </button>
+
+      <button onclick="resumeScan()" id="resumeBtn" style="display: none; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); padding: 8px 18px; border-radius: 4px; font-family: var(--mono); font-size: 11px; font-weight: 700; cursor: pointer;">
+        <span id="txt-resume-btn">RESUME SCAN</span>
+      </button>
+
+      <button onclick="stopScan()" id="stopBtn" style="display: none; background: var(--danger); color: white; border: none; padding: 8px 18px; border-radius: 4px; font-family: var(--mono); font-size: 11px; font-weight: 700; cursor: pointer;">
+        <span>STOP</span>
+      </button>
+
+      <button onclick="exportToCSV()" id="exportBtn" style="display: none; background: #217346; color: white; border: none; padding: 8px 18px; border-radius: 4px; font-family: var(--mono); font-size: 11px; font-weight: 700; cursor: pointer;">
+        <span>EXPORT TO CSV</span>
       </button>
     </div>
+
+    <!-- Progress Bar -->
+    <div id="scanProgressContainer" style="margin-top: 15px; display: none;">
+      <div style="display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-bottom: 5px;">
+        <span id="scanProgressText">Progress: 0/0</span>
+        <span id="scanPercentText">0%</span>
+      </div>
+      <div style="width: 100%; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden;">
+        <div id="scanProgressBar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease;"></div>
+      </div>
+    </div>
+
     <div id="scanStatus" style="margin-top: 10px; font-family: var(--mono); font-size: 10px; color: var(--text-dim);"></div>
     
     <div id="scanResults" style="margin-top: 16px; display: none;">
-      <table class="res-table">
-        <thead>
-          <tr>
-            <th id="th-scan-code">Code</th>
-            <th id="th-scan-name">Name</th>
-            <th id="th-scan-roce">ROCE %</th>
-            <th id="th-scan-year">Year</th>
-          </tr>
-        </thead>
-        <tbody id="scanBody"></tbody>
-      </table>
+      <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
+        <table class="res-table">
+          <thead style="position: sticky; top: 0; background: var(--surface3); z-index: 10;">
+            <tr>
+              <th id="th-scan-code">Code</th>
+              <th id="th-scan-name">Name</th>
+              <th id="th-scan-roce">ROCE % (Latest)</th>
+              <th id="th-scan-avg-roce">Avg ROCE (4Yr)</th>
+              <th id="th-scan-history">4-Year History</th>
+            </tr>
+          </thead>
+          <tbody id="scanBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -563,14 +599,17 @@ const T = {
     // Scanner
     'txt-scan-title': 'PENGIMBAS AUTO',
     'txt-scan-min-roce': 'Min ROCE (%)',
-    'txt-scan-btn': 'IMBAS PASARAN',
+    'txt-scan-btn': 'MULA IMBAS',
+    'txt-deep-scan': 'Imbas Dalam (4 Tahun ≥ 20%)',
     'th-scan-code': 'Kod',
     'th-scan-name': 'Nama',
-    'th-scan-roce': 'ROCE %',
-    'th-scan-year': 'Tahun',
+    'th-scan-roce': 'ROCE % (Terkini)',
+    'th-scan-avg-roce': 'Purata ROCE (4Thn)',
+    'th-scan-history': 'Sejarah 4 Tahun',
     'scan-status-scanning': 'Mengimbas pasaran... Sila tunggu.',
-    'scan-status-none': 'Tiada saham ditemui dengan ROCE ≥ ',
-    'scan-status-found': 'Ditemui ',
+    'scan-status-finished': 'Imbasan selesai!',
+    'scan-status-stopped': 'Imbasan dihentikan.',
+    'scan-status-none': 'Tiada saham ditemui dengan kriteria tersebut.',
     'scan-status-error': 'Ralat mengimbas pasaran: ',
     'ocr-btn': 'Imbas Gambar',
     'ocr-uploading': 'Sedang Memproses...',
@@ -647,15 +686,18 @@ const T = {
     // Scanner
     'txt-scan-title': '自动扫描器',
     'txt-scan-min-roce': '最低 ROCE (%)',
-    'txt-scan-btn': '扫描市场',
+    'txt-scan-btn': '开始扫描',
+    'txt-deep-scan': '深度扫描 (连续4年 ≥ 20%)',
     'th-scan-code': '代码',
     'th-scan-name': '名称',
-    'th-scan-roce': 'ROCE %',
-    'th-scan-year': '年份',
+    'th-scan-roce': '最新 ROCE %',
+    'th-scan-avg-roce': '4年平均 ROCE',
+    'th-scan-history': '4年历史',
     'scan-status-scanning': '正在扫描市场... 请稍候。',
-    'scan-status-none': '未找到 ROCE ≥ ',
-    'scan-status-found': '找到 ',
-    'scan-status-error': '扫描市场出错：',
+    'scan-status-finished': '扫描已完成！',
+    'scan-status-stopped': '扫描已停止。',
+    'scan-status-none': '未找到符合条件的股票。',
+    'scan-status-error': '扫描出错：',
     'ocr-btn': '扫描截图',
     'ocr-uploading': '正在识别...',
     'ocr-success': '数据提取成功！',
@@ -687,7 +729,7 @@ function setLang(l) {
     'txt-ocr-btn',
     // Scanner
     'txt-scan-title','txt-scan-min-roce','txt-scan-btn','th-scan-code',
-    'th-scan-name','th-scan-roce','th-scan-year'
+    'th-scan-name','th-scan-roce','th-scan-avg-roce','th-scan-history'
   ];
 
   ids.forEach(id => {
@@ -1177,55 +1219,192 @@ async function fetchData() {
 }
 
 // ── Market Scanner ────────────────────────────────────────────────────────
-async function scanMarket() {
+let isScanning = false;
+let scanOffset = 0;
+let scanResultsData = []; // Store all results for export
+const scanLimit = 50; 
+
+// Check for saved progress on load
+window.addEventListener('load', () => {
+  const savedOffset = localStorage.getItem('scanOffset');
+  const savedTotal = localStorage.getItem('scanTotal');
+  if (savedOffset && savedTotal && parseInt(savedOffset) < parseInt(savedTotal)) {
+    document.getElementById('resumeBtn').style.display = 'inline-block';
+    document.getElementById('scanStatus').textContent = lang === 'zh' ? 
+      `发现上次未完成的任务 (${savedOffset}/${savedTotal})` : 
+      `Found unfinished task (${savedOffset}/${savedTotal})`;
+  }
+  
+  // Load saved results if any
+  const savedResults = localStorage.getItem('scanResultsData');
+  if (savedResults) {
+    scanResultsData = JSON.parse(savedResults);
+    if (scanResultsData.length > 0) {
+      document.getElementById('exportBtn').style.display = 'inline-block';
+      renderScanResults();
+    }
+  }
+});
+
+function stopScan() {
+  isScanning = false;
+  document.getElementById('scanBtn').style.display = 'inline-block';
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('resumeBtn').style.display = 'none';
+  document.getElementById('scanStatus').textContent = T[lang]['scan-status-stopped'];
+}
+
+async function resumeScan() {
+  scanOffset = parseInt(localStorage.getItem('scanOffset') || 0);
+  startScanning();
+}
+
+async function startNewScan() {
+  scanOffset = 0;
+  scanResultsData = [];
+  localStorage.removeItem('scanResultsData');
+  document.getElementById('scanBody').innerHTML = '';
+  startScanning();
+}
+
+async function startScanning() {
+  isScanning = true;
+  document.getElementById('scanBtn').style.display = 'none';
+  document.getElementById('resumeBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display = 'inline-block';
+  document.getElementById('scanResults').style.display = 'block';
+  document.getElementById('scanProgressContainer').style.display = 'block';
+  document.getElementById('scanStatus').textContent = T[lang]['scan-status-scanning'];
+  await scanBatch();
+}
+
+async function scanBatch() {
+  if (!isScanning) return;
+
   const minRoce = document.getElementById('scanMinRoce').value;
-  const scanBtn = document.getElementById('scanBtn');
+  const deepScan = document.getElementById('deepScan').checked;
   const scanStatus = document.getElementById('scanStatus');
-  const scanResults = document.getElementById('scanResults');
-  const scanBody = document.getElementById('scanBody');
   const t = T[lang];
 
-  scanBtn.disabled = true;
-  scanStatus.textContent = t['scan-status-scanning'];
-  scanResults.style.display = 'none';
-  scanBody.innerHTML = '';
-
   try {
-    const res = await fetch(`/api/scan?min_roce=${minRoce}`);
+    const url = `/api/scan?min_roce=${minRoce}&offset=${scanOffset}&limit=${scanLimit}&deep_scan=${deepScan}`;
+    const res = await fetch(url);
     const json = await res.json();
 
-    if (!json.results || json.results.length === 0) {
-      scanStatus.textContent = t['scan-status-none'] + minRoce + '%';
+    if (!res.ok) throw new Error(json.error || 'Failed to fetch');
+
+    // Add new results
+    if (json.results && json.results.length > 0) {
+      scanResultsData = [...scanResultsData, ...json.results];
+      localStorage.setItem('scanResultsData', JSON.stringify(scanResultsData));
+      renderScanResults();
+      document.getElementById('exportBtn').style.display = 'inline-block';
+    }
+
+    updateScanProgress(json.offset + json.limit, json.total_tickers);
+    localStorage.setItem('scanOffset', json.offset + json.limit);
+    localStorage.setItem('scanTotal', json.total_tickers);
+
+    if (json.finished || !isScanning) {
+      isScanning = false;
+      document.getElementById('scanBtn').style.display = 'inline-block';
+      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('resumeBtn').style.display = 'none';
+      scanStatus.textContent = t['scan-status-finished'];
+      localStorage.removeItem('scanOffset');
+      localStorage.removeItem('scanTotal');
       return;
     }
 
-    scanStatus.textContent = t['scan-status-found'] + json.results.length + ' stocks (ROCE ≥ ' + minRoce + '%)';
-    scanResults.style.display = 'block';
+    // Auto-continue with countdown
+    let countdown = 3;
+    const nextBatchTimer = setInterval(() => {
+      if (!isScanning) {
+        clearInterval(nextBatchTimer);
+        return;
+      }
+      scanStatus.textContent = lang === 'zh' ? 
+        `批次完成。等待 ${countdown} 秒后继续...` : 
+        `Batch finished. Waiting ${countdown}s to continue...`;
+      
+      countdown--;
+      if (countdown < 0) {
+        clearInterval(nextBatchTimer);
+        scanOffset += scanLimit;
+        scanBatch();
+      }
+    }, 1000);
 
-    json.results.forEach(stock => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${stock.code}</td>
-        <td>${stock.name}</td>
-        <td style="color:${bc(stock.roce)};font-weight:700">${stock.roce}%</td>
-        <td>${stock.year}</td>
-      `;
-      // Allow clicking to load this stock
-      tr.style.cursor = 'pointer';
-      tr.onclick = () => {
-        document.getElementById('stockCode').value = stock.code;
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        // Auto fetch
-        setCode(stock.code);
-      };
-      scanBody.appendChild(tr);
-    });
   } catch (err) {
+    console.error(err);
     scanStatus.textContent = t['scan-status-error'] + err.message;
-  } finally {
-    scanBtn.disabled = false;
+    stopScan();
   }
+}
+
+function renderScanResults() {
+  const scanBody = document.getElementById('scanBody');
+  scanBody.innerHTML = '';
+  
+  // Sort by latest ROCE desc
+  const sorted = [...scanResultsData].sort((a, b) => b.roce - a.roce);
+  
+  sorted.forEach(stock => {
+    const tr = document.createElement('tr');
+    let historyStr = '—';
+    if (stock.history && stock.history.length > 0) {
+      historyStr = stock.history.map(h => `<span style="color:${bc(h.roce)}; font-size: 0.85em;">${h.roce}%</span>`).join(' → ');
+    }
+
+    tr.innerHTML = `
+      <td>${stock.code}</td>
+      <td>${stock.name}</td>
+      <td style="color:${bc(stock.roce)};font-weight:700">${stock.roce}%</td>
+      <td style="color:${bc(stock.avg_roce)};font-weight:700">${stock.avg_roce}%</td>
+      <td>${historyStr}</td>
+    `;
+    
+    tr.style.cursor = 'pointer';
+    tr.onclick = () => {
+      document.getElementById('stockCode').value = stock.code;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setCode(stock.code);
+    };
+    scanBody.appendChild(tr);
+  });
+}
+
+function updateScanProgress(current, total) {
+  const progressBar = document.getElementById('scanProgressBar');
+  const progressText = document.getElementById('scanProgressText');
+  const percentText = document.getElementById('scanPercentText');
+  
+  const safeCurrent = Math.min(current, total);
+  const percent = total > 0 ? Math.round((safeCurrent / total) * 100) : 0;
+  
+  progressBar.style.width = percent + '%';
+  progressText.textContent = `Progress: ${safeCurrent} / ${total}`;
+  percentText.textContent = percent + '%';
+}
+
+function exportToCSV() {
+  if (scanResultsData.length === 0) return;
+  
+  let csv = 'Code,Name,Latest ROCE,Avg ROCE,History\n';
+  scanResultsData.forEach(s => {
+    const history = s.history ? s.history.map(h => `${h.year}:${h.roce}%`).join(' | ') : '';
+    csv += `"${s.code}","${s.name.replace(/"/g, '""')}",${s.roce}%,${s.avg_roce}%,"${history}"\n`;
+  });
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `ROCE_Scan_Results_${new Date().toISOString().slice(0,10)}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────

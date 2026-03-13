@@ -5,3 +5,7 @@ __pycache__/
 *.pyd
 .DS_Store
 .env
+backup_v1.zip
+backup_v1/
+roce
+*.zip

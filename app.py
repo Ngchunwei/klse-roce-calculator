@@ -24,74 +24,125 @@ def clean_value(val):
         return 0
     return float(val)
 
-def fetch_yahoo(code):
+import time
+import random
+
+# Simple in-memory cache to improve stability and speed during a session
+# Format: {ticker: (data, info, timestamp)}
+DATA_CACHE = {}
+CACHE_EXPIRY = 86400 # 24 hours for better stability across sessions
+
+def fetch_yahoo(code, retries=3):
     # Handle KLSE suffix
     ticker_symbol = code
     if not ticker_symbol.endswith('.KL'):
         ticker_symbol = f"{code}.KL"
 
-    print(f"Fetching data from Yahoo for {ticker_symbol}...")
-    
-    try:
-        stock = yf.Ticker(ticker_symbol)
-        
-        # Try to get company name
-        name = code
+    # Check cache
+    now = time.time()
+    if ticker_symbol in DATA_CACHE:
+        cache_data, cache_info, timestamp = DATA_CACHE[ticker_symbol]
+        if now - timestamp < CACHE_EXPIRY:
+            print(f"Using cached data for {ticker_symbol}")
+            return cache_data, cache_info, None
+
+    attempt = 0
+    while attempt <= retries:
+        print(f"Fetching data from Yahoo for {ticker_symbol} (Attempt {attempt+1})...")
         try:
-            # yfinance info might trigger a request
-            info = stock.info
-            name = info.get('shortName') or info.get('longName') or code
-        except:
-            pass
-
-        fin = stock.financials
-        bs = stock.balance_sheet
-        
-        if fin.empty or bs.empty:
-            return None, None, f'No data found for {code} on Yahoo Finance'
-
-        def get_row(df, possible_names):
-            for name in possible_names:
-                if name in df.index:
-                    return df.loc[name]
-            return None
-
-        ebit_row = get_row(fin, ['EBIT', 'Operating Income'])
-        assets_row = get_row(bs, ['Total Assets'])
-        cl_row = get_row(bs, ['Current Liabilities', 'Total Current Liabilities'])
-
-        if ebit_row is None or assets_row is None or cl_row is None:
-             return None, None, 'Incomplete financial data on Yahoo Finance'
-
-        years_data = []
-        for date in fin.columns:
-            year = date.year
-            if date in bs.columns:
-                try:
-                    ebit = clean_value(ebit_row[date])
-                    assets = clean_value(assets_row[date])
-                    cl = clean_value(cl_row[date])
-                    
-                    ebit_m = round(ebit / 1_000_000, 1)
-                    assets_m = round(assets / 1_000_000, 1)
-                    cl_m = round(cl / 1_000_000, 1)
-                    
-                    years_data.append({
-                        'year': year,
-                        'ebit': ebit_m,
-                        'assets': assets_m,
-                        'cl': cl_m
-                    })
-                except Exception as e:
-                    print(f"Error processing year {year}: {e}")
+            stock = yf.Ticker(ticker_symbol)
+            
+            # Try multiple methods to get financials
+            fin = stock.financials
+            if fin.empty:
+                print(f"Standard financials empty for {ticker_symbol}, trying income_stmt...")
+                fin = stock.income_stmt
+                
+            bs = stock.balance_sheet
+            if bs.empty:
+                print(f"Standard balance sheet empty for {ticker_symbol}, trying balance_sheet...")
+                # Note: stock.balance_sheet is the same as stock.balancesheet
+                # but sometimes yfinance has internal issues
+                pass
+            
+            if fin.empty or bs.empty:
+                if attempt < retries:
+                    wait_time = (attempt + 1) * 3 # Increased wait time
+                    print(f"Empty data for {ticker_symbol}, retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    attempt += 1
                     continue
-        
-        years_data.sort(key=lambda x: x['year'], reverse=True)
-        return years_data, {'name': name}, None
+                return None, None, f'No data found for {code} on Yahoo Finance'
 
-    except Exception as e:
-        print(f"Yahoo Error: {e}")
-        return None, None, str(e)
+            # Try to get company name
+            name = code
+            try:
+                # Use fast_info if info is slow/failing
+                info = stock.info
+                name = info.get('shortName') or info.get('longName') or code
+            except:
+                try:
+                    name = stock.fast_info.get('commonName') or code
+                except:
+                    pass
+
+            def get_row(df, possible_names):
+                # Case-insensitive search for row names
+                available_rows = [str(i).lower() for i in df.index]
+                for name_opt in possible_names:
+                    try:
+                        idx = available_rows.index(name_opt.lower())
+                        return df.iloc[idx]
+                    except ValueError:
+                        continue
+                return None
+
+            ebit_row = get_row(fin, ['EBIT', 'Operating Income', 'OperatingIncome'])
+            assets_row = get_row(bs, ['Total Assets', 'TotalAssets'])
+            cl_row = get_row(bs, ['Current Liabilities', 'Total Current Liabilities', 'TotalCurrentLiabilities'])
+
+            if ebit_row is None or assets_row is None or cl_row is None:
+                 return None, None, 'Incomplete financial data on Yahoo Finance'
+
+            years_data = []
+            for date in fin.columns:
+                year = date.year
+                if date in bs.columns:
+                    try:
+                        ebit = clean_value(ebit_row[date])
+                        assets = clean_value(assets_row[date])
+                        cl = clean_value(cl_row[date])
+                        
+                        ebit_m = round(ebit / 1_000_000, 1)
+                        assets_m = round(assets / 1_000_000, 1)
+                        cl_m = round(cl / 1_000_000, 1)
+                        
+                        years_data.append({
+                            'year': year,
+                            'ebit': ebit_m,
+                            'assets': assets_m,
+                            'cl': cl_m
+                        })
+                    except Exception as e:
+                        print(f"Error processing year {year} for {ticker_symbol}: {e}")
+                        continue
+            
+            years_data.sort(key=lambda x: x['year'], reverse=True)
+            
+            # Store in cache before returning
+            DATA_CACHE[ticker_symbol] = (years_data, {'name': name}, now)
+            return years_data, {'name': name}, None
+
+        except Exception as e:
+            print(f"Yahoo Error for {ticker_symbol}: {e}")
+            if attempt < retries:
+                wait_time = (attempt + 1) * 2
+                time.sleep(wait_time)
+                attempt += 1
+                continue
+            return None, None, str(e)
+    
+    return None, None, "Failed after retries"
 
 def parse_sa_val(txt):
     if not txt or txt == '-': return 0.0
@@ -268,62 +319,123 @@ def get_roce_data():
 
 @app.route('/api/scan')
 def scan_stocks():
-    min_roce = float(request.args.get('min_roce', 20.0))
-    print(f"Starting scan for ROCE >= {min_roce}%...")
-    
-    results = []
-    
-    def check_stock(ticker):
-        try:
-            # Strip .KL for fetch_yahoo as it handles it, but check the function logic
-            # fetch_yahoo handles "5296" -> "5296.KL"
-            # TICKERS has "5296.KL"
-            # fetch_yahoo("5296.KL") -> "5296.KL.KL" ? No.
-            # Let's check fetch_yahoo logic:
-            # if not ticker_symbol.endswith('.KL'): ticker_symbol = f"{code}.KL"
-            # So passing "5296.KL" is safe.
-            
-            data, info, err = fetch_yahoo(ticker)
-            
-            if not data or err:
-                return
+    try:
+        min_roce = float(request.args.get('min_roce', 20.0))
+        offset = int(request.args.get('offset', 0))
+        limit = int(request.args.get('limit', 50))
+        deep_scan = request.args.get('deep_scan', 'false').lower() == 'true'
+        
+        # Get the current batch of tickers
+        current_tickers = TICKERS[offset : offset + limit]
+        
+        if not current_tickers:
+            return jsonify({
+                'results': [], 
+                'finished': True, 
+                'total_tickers': len(TICKERS),
+                'offset': offset
+            })
 
-            if not info:
-                info = {'name': ticker.replace('.KL', '')}
+        print(f"Scanning batch: {offset} to {offset + len(current_tickers)} (Deep Scan: {deep_scan})")
+        
+        results = []
+        
+        def check_stock(ticker):
+            try:
+                # Add a small random delay to avoid rate limiting
+                import time
+                import random
+                time.sleep(random.uniform(0.1, 0.5))
                 
-            # Get latest year
-            latest = data[0] # Sorted by year desc
-            
-            # Calculate ROCE
-            # Values are in Millions
-            ebit = latest['ebit']
-            assets = latest['assets']
-            cl = latest['cl']
-            
-            capital_employed = assets - cl
-            if capital_employed <= 0:
-                return
+                data, info, err = fetch_yahoo(ticker)
+                
+                if not data or err:
+                    return
 
-            roce = (ebit / capital_employed) * 100
-            
-            if roce >= min_roce:
+                if not info:
+                    info = {'name': ticker.replace('.KL', '')}
+                
+                # data is sorted by year desc
+                latest = data[0]
+                
+                def calculate_roce(year_entry):
+                    try:
+                        ebit = year_entry.get('ebit', 0)
+                        assets = year_entry.get('assets', 0)
+                        cl = year_entry.get('cl', 0)
+                        capital_employed = assets - cl
+                        if capital_employed <= 0:
+                            return None
+                        return (ebit / capital_employed) * 100
+                    except:
+                        return None
+
+                latest_roce = calculate_roce(latest)
+                if latest_roce is None:
+                    return
+
+                roce_history = []
+                passed_deep_scan = True
+                
+                # Check history
+                check_years = 4 if deep_scan else min(len(data), 4)
+                
+                all_roces = []
+                if deep_scan and len(data) < 4:
+                    passed_deep_scan = False
+                else:
+                    for i in range(check_years):
+                        if i >= len(data):
+                            if deep_scan: passed_deep_scan = False
+                            break
+                        roce = calculate_roce(data[i])
+                        if roce is not None:
+                            all_roces.append(roce)
+                            if deep_scan and roce < min_roce:
+                                passed_deep_scan = False
+                        else:
+                            if deep_scan: passed_deep_scan = False
+                        
+                        roce_history.append({
+                            'year': data[i]['year'],
+                            'roce': round(roce, 1) if roce is not None else None
+                        })
+                
+                if deep_scan and not passed_deep_scan:
+                    return
+                
+                if not deep_scan and latest_roce < min_roce:
+                    return
+
+                # Calculate average ROCE
+                avg_roce = sum(all_roces) / len(all_roces) if all_roces else 0
+
                 results.append({
                     'code': ticker.replace('.KL', ''),
-                    'name': info['name'],
-                    'roce': round(roce, 2),
-                    'year': latest['year']
+                    'name': info.get('name', ticker),
+                    'roce': round(latest_roce, 1),
+                    'avg_roce': round(avg_roce, 1),
+                    'year': latest['year'],
+                    'history': roce_history
                 })
-        except Exception as e:
-            print(f"Error checking {ticker}: {e}")
+            except Exception as e:
+                print(f"Error checking {ticker}: {e}")
 
-    # Use ThreadPool to speed up
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        executor.map(check_stock, TICKERS)
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            executor.map(check_stock, current_tickers)
+            
+        results.sort(key=lambda x: x['roce'], reverse=True)
         
-    # Sort by ROCE desc
-    results.sort(key=lambda x: x['roce'], reverse=True)
-    
-    return jsonify({'results': results})
+        return jsonify({
+            'results': results,
+            'offset': offset,
+            'limit': limit,
+            'total_tickers': len(TICKERS),
+            'finished': (offset + len(current_tickers)) >= len(TICKERS)
+        })
+    except Exception as e:
+        print(f"Scan Route Error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/ocr', methods=['POST'])
 def ocr_process():
